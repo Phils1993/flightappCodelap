@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Purpose:
@@ -24,28 +25,41 @@ public class FlightReader {
             List<FlightDTO> flightList = getFlightsFromFile("flights.json");
             List<FlightInfoDTO> flightInfoDTOList = getFlightInfoDetails(flightList);
             //flightInfoDTOList.forEach(System.out::println);
-            double totalLufthansa = getTotalFlightTimeForAirline(flightList, "Lufthansa");
-            //System.out.println("Total flight time for: " + totalLufthansa);
+
+            // Round 1
             double averageLufthansa = getAverageFlightTimeForAirline(flightList, "Lufthansa");
             //System.out.println("Average time for Lufthansa: " + averageLufthansa);
+
+            // round 2
             List<FlightDTO> flightsBetweenAirport = flightsBetweenAirports(flightList, "Queen Alia International", "Halle");
             //System.out.println("Total Flights Between Fukuoka and Haneda Airport: " + flightsBetweenAirport.size());
+
+            // Round 3
             // All flights that leave before 01:00 (1 AM)
             List<FlightInfoDTO> nightFlights =
                     getFlightsBeforeSpecificTime(flightList, LocalTime.of(1, 0));
             //System.out.println("Total Flights Before: " + nightFlights);
 
+            // Round 4
             double aveTimeForAll = calcAverageFlightTime(flightInfoDTOList);
             //System.out.println("Average time for All Airlines: " + aveTimeForAll);
 
+            // Round 5
             List<FlightInfoDTO> sortedByArrival = getFlightsSortedByArrivalTime(flightInfoDTOList);
             //System.out.println("Total Flights Sorted: " + sortedByArrival);
 
-            long calcTotalTimeForAllAirline = calcTotalFlightTimeForAllAirline(flightInfoDTOList);
+            // Round 6
+            /*
+            long calcTotalTimeForAllAirline = calcTotalFlightTimeForEachAirline(flightInfoDTOList);
             System.out.println("Total Flights time Calculated: " + calcTotalTimeForAllAirline);
+             */
 
+            getTotalFlightTimeForEachAirline(flightInfoDTOList);
+
+
+            // round 7
             List<FlightInfoDTO> sortedByDuration = sortedByDuration(flightInfoDTOList);
-            System.out.println("Total Flights sorted by duration: " + sortedByDuration);
+            //System.out.println("Total Flights sorted by duration: " + sortedByDuration);
 
 
         } catch (IOException e) {
@@ -161,12 +175,13 @@ public class FlightReader {
                 .toList();
     }
 
-    public static long calcTotalFlightTimeForAllAirline(List<FlightInfoDTO> flightList) {
-        return flightList.stream()
-                .filter(flight -> flight.getDeparture() != null && flight.getArrival() != null)
-                .mapToLong( flight ->
-                        flight.getDuration().toMinutes()
-                ).sum();
+    public static void getTotalFlightTimeForEachAirline(List<FlightInfoDTO> flightList) {
+        flightList.stream()
+                .filter(flight -> flight.getDuration() != null && flight.getAirline() != null)
+                .collect(Collectors.groupingBy(
+                        FlightInfoDTO::getAirline, // group by airline name
+                        Collectors.summingDouble(flight -> flight.getDuration().toMinutes() / 60.0) // sum hours
+                )).forEach((x,y) -> System.out.println(x+Duration.ofMinutes(y.longValue())));
     }
     public static List<FlightInfoDTO> sortedByDuration(List<FlightInfoDTO> flightList) {
         return flightList.stream()
